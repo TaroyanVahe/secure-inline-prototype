@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 3.16)
+project(secure_inline_prototype LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+find_package(OpenSSL 3.0 REQUIRED COMPONENTS Crypto)
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(NFQUEUE libnetfilter_queue)
+
+add_library(securecrypto src/secure_channel.cpp)
+target_include_directories(securecrypto PUBLIC include)
+target_link_libraries(securecrypto PUBLIC OpenSSL::Crypto)
+target_compile_options(securecrypto PRIVATE -Wall -Wextra -Wpedantic)
+
+add_executable(crypto_demo src/crypto_demo.cpp)
+target_link_libraries(crypto_demo PRIVATE securecrypto)
+
+enable_testing()
+add_executable(crypto_tests tests/crypto_tests.cpp)
+target_link_libraries(crypto_tests PRIVATE securecrypto)
+add_test(NAME crypto_tests COMMAND crypto_tests)
+
+if(NFQUEUE_FOUND)
+  add_executable(nfqueue_scaffold src/nfqueue_scaffold.cpp)
+  target_include_directories(nfqueue_scaffold PRIVATE ${NFQUEUE_INCLUDE_DIRS})
+  target_link_directories(nfqueue_scaffold PRIVATE ${NFQUEUE_LIBRARY_DIRS})
+  target_link_libraries(nfqueue_scaffold PRIVATE ${NFQUEUE_LIBRARIES})
+  target_compile_options(nfqueue_scaffold PRIVATE -Wall -Wextra -Wpedantic)
+else()
+  message(STATUS "libnetfilter_queue not found; skipping NFQUEUE scaffold target")
+endif()
